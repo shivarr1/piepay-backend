@@ -1,21 +1,13 @@
-// server.js
-// A simple backend service for the PiePay take-home assignment.
-// Author: Gemini
-// Version: MySQL Integration
-
 const express = require('express');
 const mysql = require('mysql2/promise');
-require('dotenv').config(); // To load environment variables from a .env file
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-// --- MySQL Database Connection ---
-// Create a connection pool to efficiently manage connections to the MySQL database.
-// Connection details are stored in a .env file for security.
+// MySQL connection pool
 const dbPool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER,
@@ -26,23 +18,12 @@ const dbPool = mysql.createPool({
     queueLimit: 0
 });
 
-// --- Helper Functions ---
-
-/**
- * Creates a unique ID for an offer based on its description to prevent duplicates.
- * @param {string} description - The offer description.
- * @returns {string} A hash representing the offer.
- */
+// Create a unique ID for an offer based on its description
 const createOfferId = (description) => {
-    // A simple approach to create a consistent ID for duplicate checking.
     return description.replace(/\s+/g, '').toLowerCase();
 };
 
-/**
- * Parses the assumed structure of Flipkart's API response to extract offers.
- * @param {object} flipkartApiResponse - The mock response from Flipkart's offer API.
- * @returns {Array} An array of standardized offer objects.
- */
+// Parse offers from Flipkart API response
 const parseOffersFromPayload = (flipkartApiResponse) => {
     if (!flipkartApiResponse || !Array.isArray(flipkartApiResponse.offers)) {
         console.error("Invalid or missing offers array in the payload.");
@@ -60,17 +41,7 @@ const parseOffersFromPayload = (flipkartApiResponse) => {
     }));
 };
 
-
-// --- API Endpoints ---
-
-/**
- * Endpoint to receive Flipkart's offer API response, parse offers, and store them in MySQL.
- * Handles duplicates by using "INSERT IGNORE" which relies on a UNIQUE key in the DB table.
- *
- * @route POST /offer
- * @param {object} req.body - The request body containing the flipkartOfferApiResponse.
- * @returns {object} A JSON object with counts of identified and newly created offers.
- */
+// Store offers in MySQL, ignoring duplicates
 app.post('/offer', async (req, res) => {
     try {
         const { flipkartOfferApiResponse } = req.body;
@@ -91,7 +62,6 @@ app.post('/offer', async (req, res) => {
             VALUES ?
         `;
 
-        // Map array of objects to array of arrays for the query
         const values = identifiedOffers.map(o => [o.id, o.description, o.bankName, o.paymentInstrument, o.discountType, o.discountValue, o.maxDiscount, o.minTxnValue]);
 
         const [result] = await dbPool.query(sql, [values]);
@@ -107,15 +77,7 @@ app.post('/offer', async (req, res) => {
     }
 });
 
-/**
- * Endpoint to find the highest applicable discount for a given payment scenario from MySQL.
- *
- * @route GET /highest-discount
- * @query {number} amountToPay - The total amount of the transaction.
- * @query {string} bankName - The name of the bank (e.g., "AXIS").
- * @query {string} paymentInstrument - (Bonus) The payment method (e.g., "CREDIT").
- * @returns {object} A JSON object with the highest calculated discount amount.
- */
+// Find the highest applicable discount for a payment scenario
 app.get('/highest-discount', async (req, res) => {
     try {
         const { amountToPay, bankName, paymentInstrument } = req.query;
@@ -131,7 +93,6 @@ app.get('/highest-discount', async (req, res) => {
             return res.status(400).json({ error: 'Invalid amountToPay. Must be a number.' });
         }
 
-        // 1. Query the database to fetch applicable offers
         const sql = `
             SELECT * FROM offers
             WHERE bankName = ?
@@ -145,7 +106,6 @@ app.get('/highest-discount', async (req, res) => {
             return res.json({ highestDiscountAmount: 0 });
         }
 
-        // 2. Calculate the discount for each applicable offer
         let highestDiscount = 0;
         applicableOffers.forEach(offer => {
             let currentDiscount = 0;
@@ -157,8 +117,6 @@ app.get('/highest-discount', async (req, res) => {
                     currentDiscount = offer.maxDiscount;
                 }
             }
-
-            // 3. Keep track of the highest discount found
             if (currentDiscount > highestDiscount) {
                 highestDiscount = currentDiscount;
             }
@@ -174,7 +132,7 @@ app.get('/highest-discount', async (req, res) => {
     }
 });
 
-// A simple root endpoint to confirm the server is running.
+// Root endpoint
 app.get('/', (req, res) => {
     res.send('PiePay Assignment Backend Service (MySQL Version) is running!');
 });
