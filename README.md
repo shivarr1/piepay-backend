@@ -1,0 +1,114 @@
+PiePay Backend Service - Take-Home Assignment (MySQL Version)
+This repository contains the solution for the PiePay backend developer take-home assignment. It's a simple Node.js and Express-based service designed to parse e-commerce offers, store them in a MySQL database, and calculate the best possible discount for a given transaction.
+
+Table of Contents
+Project Setup
+
+API Endpoints
+
+Assumptions Made
+
+Design Choices
+
+Scaling the Service
+
+Potential Improvements
+
+Project Setup
+To get the project running locally, you'll need Node.js, npm, and a running MySQL server.
+
+Clone the repository:
+
+git clone <your-git-repo-url>
+cd <repository-name>
+
+Install dependencies:
+The project uses Express.js and the mysql2 driver.
+
+npm install express mysql2 dotenv
+
+Database Setup:
+
+Connect to your MySQL server.
+
+Create a new database for the project. e.g., CREATE DATABASE piepay;
+
+Use the new database: USE piepay;
+
+Run the following SQL script to create the offers table:
+
+CREATE TABLE offers (
+    id VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    bankName VARCHAR(50) NOT NULL,
+    paymentInstrument VARCHAR(50) NOT NULL,
+    discountType ENUM('PERCENTAGE', 'FLAT') NOT NULL,
+    discountValue DECIMAL(10, 2) NOT NULL,
+    maxDiscount DECIMAL(10, 2),
+    minTxnValue DECIMAL(10, 2) NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+Note: The id column is the Primary Key, which ensures that duplicate offers (based on their description) are not inserted.
+
+Environment Variables:
+
+Create a file named .env in the root of your project directory.
+
+Add your database connection details to this file.
+
+# .env file
+DB_HOST=localhost
+DB_USER=your_mysql_user
+DB_PASSWORD=your_mysql_password
+DB_NAME=piepay
+
+Start the server:
+
+node server.js
+
+The server will start on http://localhost:3000.
+
+API Endpoints
+The API endpoints function the same as before, but now interact with the MySQL database. You can use tools like curl or Postman to test them.
+
+(The rest of the API endpoint documentation remains the same as the previous version: POST /offer and GET /highest-discount)
+
+Assumptions Made
+Flipkart API Structure: Since I cannot inspect live network traffic, I have assumed the structure of the flipkartOfferApiResponse payload. The parser is built to handle a clean, structured JSON format.
+
+Data Consistency: Bank names and payment instruments are assumed to be simple, consistent strings. The database queries are case-insensitive for bankName and paymentInstrument to add some flexibility.
+
+MySQL Availability: The setup assumes a MySQL server is running and accessible to the application with the provided credentials.
+
+Design Choices
+Framework: Node.js + Express.js
+
+Why: Express is a minimalist, fast, and unopinionated framework, perfect for building REST APIs quickly. Its widespread adoption makes it a standard choice for this kind of task.
+
+Database: MySQL
+
+Why: MySQL was chosen over an in-memory array to provide data persistence. This means offers are not lost when the server restarts. As a relational database, it offers scalability, reliability, and the ability to enforce data integrity through a defined schema (e.g., ensuring discountType is one of two valid options). Using a PRIMARY KEY on a unique offer ID provides an efficient way to handle duplicate entries at the database level.
+
+Database Driver: mysql2
+
+Why: The mysql2 library is a popular, high-performance driver for Node.js. Its support for promises and async/await allows for cleaner, more readable asynchronous database code compared to traditional callback-based approaches.
+
+Scaling the Service
+(This section remains the same as the previous version, as the principles of caching, database optimization, and load balancing still apply and are even more relevant with a persistent database.)
+
+Potential Improvements
+(This section remains largely the same, but the first point is now addressed.)
+
+If more time were available, I would focus on:
+
+ORM/Query Builder: Integrate an ORM like Prisma or a query builder like Knex.js. This would provide a more abstract, type-safe way to interact with the database, reducing the risk of SQL injection and making complex queries easier to write and maintain.
+
+Input Validation: Implement a validation layer using a library like Joi or Zod to ensure all incoming request bodies and query parameters are in the correct format before hitting the database.
+
+Database Migrations: Use a migration tool (often included with ORMs like Prisma or available in tools like Knex.js) to manage changes to the database schema over time in a controlled, versioned manner.
+
+Automated Testing: Write a full suite of tests using Jest, including mocking the database interactions to test the API logic in isolation.
+
+Containerization: Dockerize the application and the database for a consistent and reproducible environment across development, testing, and production.
